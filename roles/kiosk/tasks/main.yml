@@ -1,0 +1,68 @@
+---
+- name: Upgrade system
+  ansible.builtin.apt:
+    update_cache: true
+    upgrade: full
+- name: Install packages
+  ansible.builtin.apt:
+    name: [chromium-browser, weston]
+    state: latest
+# TODO: conditional reboot
+#- name: Reboot
+#  ansible.builtin.reboot:
+#    reboot_timeout: 3600
+- name: Create kiosk user
+  ansible.builtin.user:
+    name: kiosk
+    uid: 1001
+- name: Copy weston-autologin
+  ansible.builtin.copy:
+    src: weston-autologin
+    dest: /etc/pam.d/weston-autologin
+    owner: root
+    group: root
+    mode: "0644"
+- name: Copy weston@.service
+  ansible.builtin.copy:
+    src: weston@.service
+    dest: /etc/systemd/system/weston@.service
+    owner: root
+    group: root
+    mode: "0644"
+- name: Copy weston@.socket
+  ansible.builtin.copy:
+    src: weston@.socket
+    dest: /etc/systemd/system/weston@.socket
+    owner: root
+    group: root
+    mode: "0644"
+- name: Copy kiosk.service
+  ansible.builtin.copy:
+    src: kiosk.service
+    dest: /etc/systemd/system/kiosk.service
+    owner: root
+    group: root
+    mode: "0644"
+- name: Reload systemd daemon
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+- name: Enable and start weston service
+  ansible.builtin.systemd_service:
+    name: weston@tty7
+    state: restarted
+    enabled: true
+- name: Enable and start kiosk service
+  ansible.builtin.systemd_service:
+    name: kiosk
+    state: restarted
+    enabled: true
+- name: Enable and start graphical target
+  ansible.builtin.systemd_service:
+    name: graphical.target
+    state: started
+    enabled: true
+- name: Change default target to graphical.target
+  file:
+    src: /usr/lib/systemd/system/graphical.target
+    dest: /etc/systemd/system/default.target
+    state: link

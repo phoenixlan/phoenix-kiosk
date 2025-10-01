@@ -1,68 +1,33 @@
 ---
-- name: Upgrade system
-  ansible.builtin.apt:
-    update_cache: true
-    upgrade: full
-- name: Install packages
-  ansible.builtin.apt:
-    name: [chromium-browser, weston]
-    state: latest
-# TODO: conditional reboot
-#- name: Reboot
-#  ansible.builtin.reboot:
-#    reboot_timeout: 3600
-- name: Create kiosk user
-  ansible.builtin.user:
-    name: kiosk
-    uid: 1001
-- name: Copy weston-autologin
+# https://www.raspberrypi.com/tutorials/how-to-use-a-raspberry-pi-in-kiosk-mode/
+- name: Copy labwc autostart file
   ansible.builtin.copy:
-    src: weston-autologin
-    dest: /etc/pam.d/weston-autologin
+    src: autostart
+    dest: /etc/xdg/labwc/autostart
     owner: root
     group: root
     mode: "0644"
-- name: Copy weston@.service
-  ansible.builtin.copy:
-    src: weston@.service
-    dest: /etc/systemd/system/weston@.service
-    owner: root
-    group: root
-    mode: "0644"
-- name: Copy weston@.socket
-  ansible.builtin.copy:
-    src: weston@.socket
-    dest: /etc/systemd/system/weston@.socket
-    owner: root
-    group: root
-    mode: "0644"
-- name: Copy kiosk.service
-  ansible.builtin.copy:
-    src: kiosk.service
-    dest: /etc/systemd/system/kiosk.service
-    owner: root
-    group: root
-    mode: "0644"
-- name: Reload systemd daemon
-  ansible.builtin.systemd_service:
-    daemon_reload: true
-- name: Enable and start weston service
-  ansible.builtin.systemd_service:
-    name: weston@tty7
-    state: restarted
-    enabled: true
-- name: Enable and start kiosk service
-  ansible.builtin.systemd_service:
-    name: kiosk
-    state: restarted
-    enabled: true
-- name: Enable and start graphical target
-  ansible.builtin.systemd_service:
-    name: graphical.target
-    state: started
-    enabled: true
-- name: Change default target to graphical.target
-  file:
-    src: /usr/lib/systemd/system/graphical.target
-    dest: /etc/systemd/system/default.target
-    state: link
+  register: copied
+
+# ? We need to set the language to Norwegian because info.phoenixlan.no has lang=nb
+- name: Generate Norwegian Bokmål locale
+  community.general.locale_gen:
+    name:
+      - "nb_NO.UTF-8"
+    state: present
+
+# https://github.com/alysoid/ansible-locale/blob/main/tasks/main.yml
+- name: Register localectl status
+  ansible.builtin.command: localectl status
+  register: localectl_status
+  changed_when: false
+
+- name: Get current system language
+  ansible.builtin.set_fact:
+    lang_current: "{{ localectl_status.stdout | regex_search('LANG=([^\n]+)', '\\1') | first }}"
+    language_current: "{{ localectl_status.stdout | regex_search('LANGUAGE=([^\n]+)', '\\1') | default([locale], true) | first }}"
+
+- name: Set system language to Norwegian Bokmål
+  ansible.builtin.command: localectl set-locale LANG=nb_NO.UTF-8 LANGUAGE=nb_NO.UTF-8
+  when: lang_current != "nb_NO.UTF-8" or language_current != "nb_NO.UTF-8"
+  changed_when: false

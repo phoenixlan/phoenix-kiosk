@@ -24,7 +24,7 @@ Last ned [Raspberry PI Imager](https://www.raspberrypi.com/software/).
 
 - Kjør kommandoen under og oppgi SSH passord
 ```bash
-ansible-playbook ./main.yml -k
+ansible-playbook ./main.yml -Kk
 ```
 
 - Profit!

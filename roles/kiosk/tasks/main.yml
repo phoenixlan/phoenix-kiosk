@@ -7,7 +7,6 @@
     owner: root
     group: root
     mode: "0644"
-  register: copied
 
 # ? We need to set the language to Norwegian because info.phoenixlan.no has lang=nb
 - name: Generate Norwegian Bokmål locale
@@ -15,19 +14,6 @@
     name:
       - "nb_NO.UTF-8"
     state: present
-
-# https://github.com/alysoid/ansible-locale/blob/main/tasks/main.yml
-- name: Register localectl status
-  ansible.builtin.command: localectl status
-  register: localectl_status
-  changed_when: false
-
-- name: Get current system language
-  ansible.builtin.set_fact:
-    lang_current: "{{ localectl_status.stdout | regex_search('LANG=([^\n]+)', '\\1') | first }}"
-    language_current: "{{ localectl_status.stdout | regex_search('LANGUAGE=([^\n]+)', '\\1') | default([locale], true) | first }}"
-
 - name: Set system language to Norwegian Bokmål
   ansible.builtin.command: localectl set-locale LANG=nb_NO.UTF-8 LANGUAGE=nb_NO.UTF-8
-  when: lang_current != "nb_NO.UTF-8" or language_current != "nb_NO.UTF-8"
   changed_when: false

@@ -1,0 +1,9 @@
+---
+- name: Set up kiosks
+  hosts: kiosks
+  gather_facts: true
+  roles:
+    - role: kiosk
+      become: true
+    - role: update
+      become: true
